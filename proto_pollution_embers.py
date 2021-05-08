@@ -61,6 +61,8 @@ for url in urls:
     if thisUrl:
         if thisUrl['url'].endswith('/'):
             workingUrl = thisUrl['url'][:-1]
+        else:
+            workingUrl = thisUrl['url']
         for endpoint in thisUrl['endpoints']:
             uri = workingUrl + endpoint['endpoint']
             if uri not in urls:

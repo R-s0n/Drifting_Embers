@@ -4,7 +4,7 @@ A Collection of Python Scripts used for automated vuln scanning as part of my Bu
 
 ### Nuclei Embers
 
-Runs nuclei scans on all live URLs for a given FQDN
+Runs nuclei scans on all live URLs for a given FQDN (use read_json.py to quickly read reports)
 
 `python3 nuclei_embers.py -d [FQDN] -t [TEMPLATE]`
 
