@@ -46,7 +46,7 @@ f.close()
 
 now = datetime.now().strftime("%d-%m-%y_%I%p")
 
-subprocess.run([f"{home_dir}/go/bin/nuclei -t {template}/ -l /tmp/urls.txt -o {home_dir}/Reports/{template}-{now}.json -json"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,shell=True)
+subprocess.run([f"{home_dir}/go/bin/nuclei -t {template}/ -l /tmp/urls.txt -o {home_dir}/Reports/{template}-{now}.json -json"], shell=True)
 
 try:
     f = open(f"{home_dir}/Reports/{template}-{now}.json")
