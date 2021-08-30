@@ -14,6 +14,3 @@ Multi-threaded Prototype Pollution scanner using chromedp and a custom go script
 
 `python3 proto_pollution_embers.py -d [FQDN] -T [THREADS]`
 
-### HTMLI Embers
-
-Coming Soon...
