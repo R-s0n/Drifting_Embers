@@ -100,18 +100,39 @@ def get_home_dir():
     get_home_dir = subprocess.run(["echo $HOME"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, shell=True)
     return get_home_dir.stdout.replace("\n", "")
 
+def send_slack_notification(args, url):
+    home_dir = get_home_dir()
+    message_json = {'text':f'Package {args.package} was found running on {url}!  (This will have a lot more information after I add this to the framework...)','username':'Vuln Disco Box','icon_emoji':':dart:'}
+    f = open(f'{home_dir}/.keys/slack_web_hook')
+    token = f.read()
+    slack_auto = requests.post(f'https://hooks.slack.com/services/{token}', json=message_json)
+
+def wappalyzer(url):
+    wappalyzer = subprocess.run([f'wappalyzer {url} -p'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, shell=True)
+    return wappalyzer.stdout
+
 def npm_package_scan(args, url_list):
     for url in url_list:
-        print(f"[-] Scanning {url}...")
-        get_links(url, url)
-        # Uncomment to add crawling
-        # link_number = crawl_links(url, "1")
-        for link in links:
-            get_scripts(link)
-        for script in script_links:
-            if args.package.lower() in script.lower():
-                print(f"[+] Package {args.package} was found on {url}!")
-                break
+        if "http" in url:
+            print(f"[-] Scanning {url}...")
+            get_links(url, url)
+            # Uncomment to add crawling
+            # link_number = crawl_links(url, "1")
+            wappalyzer_string = wappalyzer(url)
+            wappalyzer_json = json.loads(wappalyzer_string)
+            if args.package in wappalyzer_string:
+                print(f"[+] Package {args.package} was found on {url}! (From Wappalyzer)")
+                send_slack_notification(args, url)
+                print(json.dumps(wappalyzer_json, indent=4))
+                continue
+            for link in links:
+                get_scripts(link)
+            for script in script_links:
+                if args.package.lower() in script.lower():
+                    print(f"[+] Package {args.package} was found on {url}! (From Script Scan)")
+                    send_slack_notification(args, url)
+                    print(json.dumps(wappalyzer_json, indent=4))
+                    break
 
 
 def get_fqdns(args):
@@ -122,14 +143,22 @@ def get_fqdns(args):
         fqdn_list.append(fqdn['recon']['subdomains']['httprobe'])
     return fqdn_list
 
+
 def arg_parse():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-s','--server', help='IP Address of MongoDB API', required=True)
-    parser.add_argument('-p','--port', help='Port of MongoDB API', required=True)
-    parser.add_argument('-P','--package', help='Name of JavaScript package', required=True)
+    parser.add_argument('-S','--server', help='IP Address of MongoDB API', required=True)
+    parser.add_argument('-P','--port', help='Port of MongoDB API', required=True)
+    parser.add_argument('-j','--js', help='Scan For JavaScript Package', required=False, action='store_true')
+    parser.add_argument('-p','--package', help='Name of JavaScript Package', required=False)
     return parser.parse_args()
 
 def main(args):
+    if args.js is False:
+        print("[!] Please select atleast one scanning type ( -j/--js | )")
+        sys.exit(2)
+    if args.js is True and not args.package:
+        print("[!] Please include the name of the JavaScript package to scan for (-p/--package)")
+        sys.exit(2)
     fqdn_list = get_fqdns(args)
     clean_url_list = clean_urls(fqdn_list)
     npm_package_scan(args, clean_url_list)

@@ -3,19 +3,36 @@ from datetime import datetime
 
 full_cmd_arguments = sys.argv
 argument_list = full_cmd_arguments[1:]
-short_options = "d:t:"
-long_options = ["domain=", "template="]
+short_options = "d:s:p:t:"
+long_options = ["domain=","server=","port=","template="]
 
 try:
     arguments, values = getopt.getopt(argument_list, short_options, long_options)
 except:
     sys.exit(2)
 
+hasDomain = False
+hasServer = False
+hasPort = False
+hasTemplate = False
+
 for current_argument, current_value in arguments:
     if current_argument in ("-d", "--domain"):
         fqdn = current_value
+        hasDomain = True
+    if current_argument in ("-s", "--server"):
+        server_ip = current_value
+        hasServer = True
+    if current_argument in ("-p", "--port"):
+        server_port = current_value
+        hasPort = True
     if current_argument in ("-t", "--template"):
         template = current_value
+        hasTemplate = True
+
+if hasDomain is False or hasServer is False or hasPort is False or hasTemplate is False:
+    print("[!] USAGE: python3 kindling.py -d [TARGET_FQDN] -s [WAPT_FRAMEWORK_IP] -p [WAPT_FRAMEWORK_PORT] -t [TEMPLATE]")
+    sys.exit(2)
 
 get_home_dir = subprocess.run(["echo $HOME"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, shell=True)
 home_dir = get_home_dir.stdout.replace("\n", "")
@@ -27,14 +44,13 @@ f.close()
 
 start = time.time()
 
-r = requests.post('http://10.0.0.211:8000/api/auto', data={'fqdn':fqdn})
+r = requests.post(f'http://{server_ip}:{server_port}/api/auto', data={'fqdn':fqdn})
 thisFqdn = r.json()
 
 httprobe_arr = thisFqdn['recon']['subdomains']['httprobe']
 masscan_arr = thisFqdn['recon']['subdomains']['masscanLive']
 
 urls = httprobe_arr + masscan_arr
-
 url_str = ""
 
 for url in urls:
