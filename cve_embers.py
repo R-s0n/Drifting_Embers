@@ -1,4 +1,4 @@
-import requests, argparse, subprocess, sys, json
+import requests, argparse, subprocess, sys, json, math, threading
 from bs4 import BeautifulSoup
 from time import sleep
 requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
@@ -111,28 +111,25 @@ def wappalyzer(url):
     wappalyzer = subprocess.run([f'wappalyzer {url} -p'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, shell=True)
     return wappalyzer.stdout
 
-def npm_package_scan(args, url_list):
-    for url in url_list:
-        if "http" in url:
-            print(f"[-] Scanning {url}...")
-            get_links(url, url)
-            # Uncomment to add crawling
-            # link_number = crawl_links(url, "1")
-            wappalyzer_string = wappalyzer(url)
-            wappalyzer_json = json.loads(wappalyzer_string)
-            if args.package in wappalyzer_string:
-                print(f"[+] Package {args.package} was found on {url}! (From Wappalyzer)")
+def npm_package_scan(self, args, url):
+    if "http" in url:
+        print(f"[-] Scanning {url}...")
+        get_links(url, url)
+        # Uncomment to add crawling
+        # link_number = crawl_links(url, "1")
+        wappalyzer_string = wappalyzer(url)
+        wappalyzer_json = json.loads(wappalyzer_string)
+        if args.package in wappalyzer_string:
+            print(f"[+] Package {args.package} was found on {url}! (From Wappalyzer)")
+            send_slack_notification(args, url)
+            print(json.dumps(wappalyzer_json, indent=4))
+        for link in links:
+            get_scripts(link)
+        for script in script_links:
+            if args.package.lower() in script.lower():
+                print(f"[+] Package {args.package} was found on {url}! (From Script Scan)")
                 send_slack_notification(args, url)
                 print(json.dumps(wappalyzer_json, indent=4))
-                continue
-            for link in links:
-                get_scripts(link)
-            for script in script_links:
-                if args.package.lower() in script.lower():
-                    print(f"[+] Package {args.package} was found on {url}! (From Script Scan)")
-                    send_slack_notification(args, url)
-                    print(json.dumps(wappalyzer_json, indent=4))
-                    break
 
 
 def get_fqdns(args):
@@ -148,6 +145,7 @@ def arg_parse():
     parser = argparse.ArgumentParser()
     parser.add_argument('-S','--server', help='IP Address of MongoDB API', required=True)
     parser.add_argument('-P','--port', help='Port of MongoDB API', required=True)
+    parser.add_argument('-T','--threads', help='Number of Threads', required=True)
     parser.add_argument('-j','--js', help='Scan For JavaScript Package', required=False, action='store_true')
     parser.add_argument('-p','--package', help='Name of JavaScript Package', required=False)
     return parser.parse_args()
@@ -161,6 +159,24 @@ def main(args):
         sys.exit(2)
     fqdn_list = get_fqdns(args)
     clean_url_list = clean_urls(fqdn_list)
+    while len(clean_url_list) > 0:
+        if len(clean_url_list) < int(args.threads):
+            x_ls = list(range(len(clean_url_list)))
+        else:
+            x_ls = list(range(int(args.threads)))
+        thread_list = []
+        for x in x_ls:
+            u = clean_url_list[0]
+            thisUrl = clean_url_list[0]
+            clean_url_list.remove(u)
+            thread = threading.Thread(target=npm_package_scan, args=(x, args, u))
+            thread_list.append(thread)
+        for thread in thread_list:
+            thread.start()
+        for thread in thread_list:
+            thread.join()
+        new_length = len(clean_url_list)
+        print(f"URLs remaining: {new_length}")
     npm_package_scan(args, clean_url_list)
     print("[+] Done!")
 
